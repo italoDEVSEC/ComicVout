@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minha Coleção de Quadrinhos</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <style>
+    /* Estilos CSS existentes */
+    /* Inclusões */
+    body {
+      background-color: #141E28;
+      color: #FFF;
+      font-family: Arial, sans-serif;
+    }
+    
+    header {
+      background-color: #0D141C;
+      padding: 20px;
+    }
+    
+    h1 {
+      margin: 0;
+      color: #8CA9C5;
+    }
+    
+    main {
+      padding: 20px;
+    }
+    
+    h2 {
+      color: #8CA9C5;
+    }
+    
+    form {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    
+    input,
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 10px;
+      border: none;
+      background-color: #FFF;
+      color: #333;
+    }
+    
+    button {
+      padding: 10px 20px;
+      background-color: #8CA9C5;
+      border: none;
+      color: #FFF;
+      cursor: pointer;
+    }
+    
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+    
+    .card {
+      background-color: #0D141C;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    
+    .card img {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+    
+    .card-info {
+      color: #FFF;
+      margin-bottom: 10px;
+    }
+    
+    .card-actions {
+      text-align: right;
+    }
+    
+    .edit-btn,
+    .delete-btn {
+      padding: 5px;
+      background-color: transparent;
+      border: none;
+      color: #8CA9C5;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Minha Coleção de Quadrinhos</h1>
+  </header>
+
+  <main>
+    <section id="cadastro">
+      <h2>Cadastrar Quadrinho</h2>
+      <form id="cadastro-form">
+        <label for="titulo">Título:</label>
+        <input type="text" id="titulo" required>
+
+        <label for="autor">Autor:</label>
+        <input type="text" id="autor" required>
+
+        <label for="tipo">Tipo:</label>
+        <select id="tipo" required>
+          <option value="">Selecione</option>
+          <option value="hq">Quadrinho</option>
+          <option value="manga">Mangá</option>
+        </select>
+
+        <label for="capa">Capa:</label>
+        <input type="file" id="capa" accept=".png, .jpg, .jpeg" required>
+
+        <button type="submit">Cadastrar</button>
+      </form>
+    </section>
+
+    <section id="quadrinhos">
+      <h2>Minha Coleção</h2>
+      <select id="filtro-select">
+        <option value="todos">Todos</option>
+        <option value="hq">HQ</option>
+        <option value="manga">Mangá</option>
+      </select>
+      <ul id="quadrinhos-list"></ul>
+    </section>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/9.0.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.1/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.1/firebase-storage.js"></script>
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_AUTH_DOMAIN",
+      projectId: "SEU_PROJECT_ID",
+      storageBucket: "SEU_STORAGE_BUCKET",
+      appId: "SEU_APP_ID"
+    };
+
+    // Inicialize o Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // Obtenha uma referência para o Firebase Firestore
+    const db = firebase.firestore();
+
+    // Obtenha uma referência para o Firebase Storage
+    const storage = firebase.storage();
+
+    // Função para adicionar um quadrinho ao Firebase Firestore
+    function adicionarQuadrinho(titulo, autor, tipo, capaUrl) {
+      db.collection("quadrinhos").add({
+        titulo: titulo,
+        autor: autor,
+        tipo: tipo,
+        capaUrl: capaUrl
+      })
+      .then((docRef) => {
+        console.log("Quadrinho cadastrado com ID: ", docRef.id);
+      })
+      .catch((error) => {
+        console.error("Erro ao cadastrar quadrinho: ", error);
+      });
+    }
+
+    // Função para carregar os quadrinhos do Firebase Firestore
+    function carregarQuadrinhos() {
+      const quadrinhosList = document.getElementById("quadrinhos-list");
+      quadrinhosList.innerHTML = "";
+
+      db.collection("quadrinhos").get()
+        .then((querySnapshot) => {
+          querySnapshot.forEach((doc) => {
+            const quadrinho = doc.data();
+
+            const card = document.createElement("li");
+            card.classList.add("card");
+
+            const imagem = document.createElement("img");
+            imagem.src = quadrinho.capaUrl;
+            card.appendChild(imagem);
+
+            const info = document.createElement("div");
+            info.classList.add("card-info");
+
+            const titulo = document.createElement("h3");
+            titulo.textContent = quadrinho.titulo;
+            info.appendChild(titulo);
+
+            const autor = document.createElement("p");
+            autor.textContent = "Autor: " + quadrinho.autor;
+            info.appendChild(autor);
+
+            card.appendChild(info);
+
+            const actions = document.createElement("div");
+            actions.classList.add("card-actions");
+
+            const editBtn = document.createElement("button");
+            editBtn.classList.add("edit-btn");
+            editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+            actions.appendChild(editBtn);
+
+            const deleteBtn = document.createElement("button");
+            deleteBtn.classList.add("delete-btn");
+            deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+            actions.appendChild(deleteBtn);
+
+            card.appendChild(actions);
+
+            quadrinhosList.appendChild(card);
+          });
+        })
+        .catch((error) => {
+          console.error("Erro ao carregar quadrinhos: ", error);
+        });
+    }
+
+    // Evento de envio do formulário de cadastro
+    const form = document.getElementById("cadastro-form");
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      
+      const titulo = document.getElementById("titulo").value;
+      const autor = document.getElementById("autor").value;
+      const tipo = document.getElementById("tipo").value;
+      const capaFile = document.getElementById("capa").files[0];
+
+      const storageRef = storage.ref();
+      const capaRef = storageRef.child(capaFile.name);
+
+      capaRef.put(capaFile)
+        .then((snapshot) => {
+          return snapshot.ref.getDownloadURL();
+        })
+        .then((capaUrl) => {
+          adicionarQuadrinho(titulo, autor, tipo, capaUrl);
+          form.reset();
+        })
+        .catch((error) => {
+          console.error("Erro ao fazer upload da capa: ", error);
+        });
+    });
+
+    // Evento de mudança no filtro de quadrinhos
+    const filtroSelect = document.getElementById("filtro-select");
+    filtroSelect.addEventListener("change", () => {
+      const filtro = filtroSelect.value;
+      if (filtro === "todos") {
+        carregarQuadrinhos();
+      } else {
+        const quadrinhosList = document.getElementById("quadrinhos-list");
+        quadrinhosList.innerHTML = "";
+
+        db.collection("quadrinhos").where("tipo", "==", filtro).get()
+          .then((querySnapshot) => {
+            querySnapshot.forEach((doc) => {
+              const quadrinho = doc.data();
+
+              const card = document.createElement("li");
+              card.classList.add("card");
+
+              const imagem = document.createElement("img");
+              imagem.src = quadrinho.capaUrl;
+              card.appendChild(imagem);
+
+              const info = document.createElement("div");
+              info.classList.add("card-info");
+
+              const titulo = document.createElement("h3");
+              titulo.textContent = quadrinho.titulo;
+              info.appendChild(titulo);
+
+              const autor = document.createElement("p");
+              autor.textContent = "Autor: " + quadrinho.autor;
+              info.appendChild(autor);
+
+              card.appendChild(info);
+
+              const actions = document.createElement("div");
+              actions.classList.add("card-actions");
+
+              const editBtn = document.createElement("button");
+              editBtn.classList.add("edit-btn");
+              editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+              actions.appendChild(editBtn);
+
+              const deleteBtn = document.createElement("button");
+              deleteBtn.classList.add("delete-btn");
+              deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+              actions.appendChild(deleteBtn);
+
+              card.appendChild(actions);
+
+              quadrinhosList.appendChild(card);
+            });
+          })
+          .catch((error) => {
+            console.error("Erro ao filtrar quadrinhos: ", error);
+          });
+      }
+    });
+
+    // Carregar todos os quadrinhos ao carregar a página
+    carregarQuadrinhos();
+  </script>
+</body>
+</html>
